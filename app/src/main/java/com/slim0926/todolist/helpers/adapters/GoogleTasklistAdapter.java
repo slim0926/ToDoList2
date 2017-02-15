@@ -59,7 +59,7 @@ public class GoogleTasklistAdapter extends
                 notifyItemChanged(mSelectedPosition);
                 if (mSelectedPosition == position) {
                     mSelectedPosition = -1;
-                    //mTasklistID = "";
+                    mTasklistID = "";
                 } else {
                     mSelectedPosition = position;
 
@@ -73,6 +73,9 @@ public class GoogleTasklistAdapter extends
 
     @Override
     public int getItemCount() {
+        if (mTasklists == null) {
+            return 0;
+        }
         return mTasklists.length;
     }
 

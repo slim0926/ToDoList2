@@ -19,6 +19,7 @@ import android.support.v7.widget.PopupMenu;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.style.RelativeSizeSpan;
+import android.util.Log;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -28,6 +29,7 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -445,7 +447,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
 
     }
 
-    private class MakeRequestTask //extends AsyncTask<Void, Void, ToDoListItem[]>
+    private class MakeRequestTask
             implements GoogleTasksFragment.OnItemClickedListener
     {
         private static final int GET_TASKLISTS_COMPLETE = 0;
@@ -473,27 +475,33 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
                     try {
                         result = mService.tasklists().list().setMaxResults(10L).execute();
 
+                    } catch (UserRecoverableAuthIOException e) {
+                        startActivityForResult(e.getIntent(), REQUEST_AUTHORIZATION);
 
                     } catch (IOException e) {
 
+                        Log.e("GOOGLE-ERROR", e.toString());
+                        Log.e("GOOGLE_ERROR", e.getCause().toString());
                     }
-                    List<TaskList> taskLists = result.getItems();
-                    mGoogleTasklists = new GoogleTasklist[taskLists.size()];
-                    if (taskLists != null) {
-                        int i = 0;
-                        for (TaskList tasklist : taskLists) {
-                            mGoogleTasklists[i] = new GoogleTasklist();
-                            mGoogleTasklists[i].setTitle(tasklist.getTitle());
-                            mGoogleTasklists[i].setID(tasklist.getId());
-                            i++;
+
+                    if (result != null) {
+
+                        List<TaskList> taskLists = result.getItems();
+                        mGoogleTasklists = new GoogleTasklist[taskLists.size()];
+                        if (taskLists != null) {
+                            int i = 0;
+                            for (TaskList tasklist : taskLists) {
+                                mGoogleTasklists[i] = new GoogleTasklist();
+                                mGoogleTasklists[i].setTitle(tasklist.getTitle());
+                                mGoogleTasklists[i].setID(tasklist.getId());
+                                i++;
+                            }
                         }
+
+                        mDialog = GoogleTasksFragment.newInstance();
+                        mDialog.show(getSupportFragmentManager(), GOOGLETASKLIST_DIALOG);
+
                     }
-
-                            //mGoogleTasklists = Arrays.copyOf(googleTasklists, googleTasklists.length);
-
-                            mDialog = GoogleTasksFragment.newInstance();
-                            mDialog.show(getSupportFragmentManager(), GOOGLETASKLIST_DIALOG);
-
                 }
             });
             backgroundThread.start();
@@ -507,7 +515,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
                 public void run() {
                 mTasklistID = mDialog.mAdapter.mTasklistID;
 
-                if (mTasklistID == null) {
+                if (mTasklistID == null || mTasklistID.equals("")) {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -521,42 +529,56 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
                     try {
                         tasks = mService.tasks().list(mTasklistID).execute();
                     } catch (IOException e) {
-
+                        Log.e("MainActivity", e.toString());
                     }
 
-                    boolean isDuplicate = false;
-                    for (Task task : tasks.getItems()) {
-                        for (ToDoListItem item : mItems.getToDoList()) {
-                            if (task.getTitle().equals(item.getTitle())) {
-                                isDuplicate = true;
+                    if (tasks != null) {
+                        if (tasks.getItems() == null) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "There are no Tasks in this Tasklist.",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        } else {
+                            boolean isDuplicate = false;
+                            for (Task task : tasks.getItems()) {
+                                if (mItems.getSize() > 0) {
+                                    for (ToDoListItem item : mItems.getToDoList()) {
+                                        if (task.getTitle().equals(item.getTitle())) {
+                                            isDuplicate = true;
+                                        }
+                                    }
+                                }
+                                if (!task.getTitle().equals("") && !isDuplicate) {
+
+                                    String title = task.getTitle();
+                                    String notes = "";
+                                    String dueDate = "";
+
+                                    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("M/d/yyyy");
+                                    Calendar calendar = Calendar.getInstance();
+                                    calendar.add(Calendar.DATE, YEARS_TO_BE_ADDED);
+                                    dueDate = simpleDateFormat.format(calendar.getTime());
+
+                                    String location = "";
+                                    String priority = "None";
+                                    boolean isChecked = false;
+
+                                    addItem(title, notes, dueDate, location, priority, isChecked);
+                                }
+                                isDuplicate = false;
                             }
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    refreshRecyclerview();
+                                    mDialog.dismiss();
+                                }
+                            });
                         }
-                        if (!task.getTitle().equals("") && !isDuplicate) {
-
-                            String title = task.getTitle();
-                            String notes = "";
-                            String dueDate = "";
-
-                            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("M/d/yyyy");
-                            Calendar calendar = Calendar.getInstance();
-                            calendar.add(Calendar.DATE, YEARS_TO_BE_ADDED);
-                            dueDate = simpleDateFormat.format(calendar.getTime());
-
-                            String location = "";
-                            String priority = "None";
-                            boolean isChecked = false;
-
-                            addItem(title, notes, dueDate, location, priority, isChecked);
-                        }
-                        isDuplicate = false;
                     }
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            refreshRecyclerview();
-                            mDialog.dismiss();
-                        }
-                    });
                 }
                 }
             });
@@ -571,7 +593,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
                 public void run() {
                 mTasklistID = mDialog.mAdapter.mTasklistID;
 
-                if (mTasklistID == null) {
+                if (mTasklistID == null || mTasklistID.equals("")) {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -587,24 +609,36 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
                     } catch (IOException e) {
 
                     }
-                    boolean isDuplicate = false;
-                    for (ToDoListItem item : mItems.getToDoList()) {
-                        for (Task googleTask : tasks.getItems()) {
-                            if (item.getTitle().equals(googleTask.getTitle())) {
-                                isDuplicate = true;
+                    if (mItems.getSize() > 0) {
+                        boolean isDuplicate = false;
+                        for (ToDoListItem item : mItems.getToDoList()) {
+                            if (tasks != null) {
+                                for (Task googleTask : tasks.getItems()) {
+                                    if (item.getTitle().equals(googleTask.getTitle())) {
+                                        isDuplicate = true;
+                                    }
+                                }
                             }
-                        }
-                        if (!isDuplicate) {
+                            if (!isDuplicate) {
 
-                            Task task = new Task();
-                            task.setTitle(item.getTitle());
-                            try {
-                                mService.tasks().insert(mTasklistID, task).execute();
-                            } catch (IOException e) {
+                                Task task = new Task();
+                                task.setTitle(item.getTitle());
+                                try {
+                                    mService.tasks().insert(mTasklistID, task).execute();
+                                } catch (IOException e) {
 
+                                }
                             }
+                            isDuplicate = false;
                         }
-                        isDuplicate = false;
+                    } else {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "There are no items to unload.",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        });
                     }
                     runOnUiThread(new Runnable() {
                         @Override
