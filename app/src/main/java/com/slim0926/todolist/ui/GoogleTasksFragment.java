@@ -1,16 +1,12 @@
 package com.slim0926.todolist.ui;
 
 
-import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,14 +14,11 @@ import android.widget.Button;
 
 import com.slim0926.todolist.R;
 import com.slim0926.todolist.helpers.adapters.GoogleTasklistAdapter;
-import com.slim0926.todolist.model.GoogleTasklist;
-import com.slim0926.todolist.model.ToDoListItem;
 
 import java.io.IOException;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import butterknife.OnClick;
 
 /**
  * Created by sue on 1/19/17.
@@ -98,7 +91,18 @@ public class GoogleTasksFragment extends DialogFragment {
         return view;
     }
 
-//    @Override
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        if (getDialog() == null) {
+            return;
+        }
+
+        getDialog().getWindow().setWindowAnimations(R.style.dialog_animation_slide);
+    }
+
+    //    @Override
 //    public void onSaveInstanceState(Bundle outState) {
 //        if (((MainActivity)getActivity()).mIsDialog == true) {
 //        super.onSaveInstanceState(outState);
