@@ -66,11 +66,21 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
     private static final int YEARS_TO_BE_ADDED = 365000;
     private static final String GOOGLETASKLIST_DIALOG = "googletasklist_dialog";
     private static final String IS_DIALOG = "is_dialog";
+    private static final String DETAILS_ID = "details_id";
+    private static final String DETAILS_TITLE = "details_title";
+    private static final String DETAILS_NOTES = "details_notes";
+    private static final String DETAILS_DUEDATE = "details_duedate";
+    private static final String DETAILS_ADDRESS = "details_address";
+    private static final String DETAILS_PRIORITY = "details_priority";
+    private static final String DETAILS_CHECKED = "details_checked";
+    private static final String DETAILS_ADD_BUTTON_CLICKED = "details_addbuttonclicked";
 
     protected ToDoListItems mItems;
     private DetailsFragment mDetailsFragment;
     private RecyclerListFragment mRecyclerListFragment;
     private boolean mIsUpdate = false;
+    private int mDetailsID = -1;
+    private boolean mIsDetailsAddButtonClicked = false;
 
     // For connecting to Google Tasks
     static final int REQUEST_ACCOUNT_PICKER = 1000;
@@ -86,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
     boolean mIsDialog = false;
     private String[] mStrTasklists;
     GoogleTasksFragment mDialog;
+
 
 
     @Override
@@ -106,7 +117,54 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
             if (mIsDialog) {
                 getResultsFromApi();
             }
+
+        } else if (savedInstanceState != null && savedInstanceState.containsKey(DETAILS_ID)) {
+            mDetailsID = savedInstanceState.getInt(DETAILS_ID);
+            onTitleClicked(mDetailsID);
+        } else if (savedInstanceState != null && savedInstanceState.containsKey(DETAILS_ADD_BUTTON_CLICKED)) {
+            onToDoListItemAddButtonClicked();
+//            String title = savedInstanceState.getString(DETAILS_TITLE);
+//            if (!title.equals("")) {
+//                mDetailsFragment.mDetailsTitleEdit.setText(title);
+//            }
+//            String notes = savedInstanceState.getString(DETAILS_NOTES);
+//            if (!notes.equals("")) {
+//                mDetailsFragment.mNotesEdit.setText(notes);
+//            }
+//            String duedate = savedInstanceState.getString(DETAILS_DUEDATE);
+//            if (!duedate.equals("")) {
+//                mDetailsFragment.mDueDateEdit.setText(duedate);
+//            }
+//            String address = savedInstanceState.getString(DETAILS_ADDRESS);
+//            if (!address.equals("")) {
+//                mDetailsFragment.mAddressEdit.setText(address);
+//            }
+//            String priority = savedInstanceState.getString(DETAILS_PRIORITY);
+//            int priorityPos = 0;
+//            switch (priority) {
+//                case "None":
+//                    priorityPos = 0;
+//                    break;
+//                case "High":
+//                    priorityPos = 1;
+//                    break;
+//                case "Medium":
+//                    priorityPos = 2;
+//                    break;
+//                case "Low":
+//                    priorityPos = 3;
+//                    break;
+//            }
+//            if (priorityPos != 0) {
+//                mDetailsFragment.mPrioritySpinner.setSelection(priorityPos);
+//            }
+//            boolean isChecked = savedInstanceState.getBoolean(DETAILS_CHECKED);
+//            if (isChecked) {
+//                mDetailsFragment.mDetailsCheckBox.setChecked(isChecked);
+//            }
         }
+
+
     }
 
     private void getRecyclerListFragment() {
@@ -123,6 +181,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
 
     @Override
     public void onToDoListItemAddButtonClicked() {
+        mIsDetailsAddButtonClicked = true;
         mDetailsFragment = new DetailsFragment();
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
@@ -134,6 +193,9 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
 
     @Override
     public void onTitleClicked(int iD) {
+
+        mDetailsID = iD;
+
         mDetailsFragment = new DetailsFragment();
 
         Bundle args = new Bundle();
@@ -245,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
             } else {
                 addItem(title, notes, dueDate, location, priority, isChecked);
             }
+            mDetailsID = -1;
             onBackPressed();
         }
     }
@@ -327,7 +390,26 @@ public class MainActivity extends AppCompatActivity implements RecyclerListFragm
         if (mIsDialog) {
             outState.putBoolean(IS_DIALOG, mIsDialog);
         }
+        if (mDetailsID != -1) {
+            outState.putInt(DETAILS_ID, mDetailsID);
+        }
+        if (mIsDetailsAddButtonClicked) {
+            outState.putBoolean(DETAILS_ADD_BUTTON_CLICKED, true);
+            outState.putString(DETAILS_TITLE, mDetailsFragment.mDetailsTitleEdit.getText().toString());
+            outState.putString(DETAILS_NOTES, mDetailsFragment.mNotesEdit.getText().toString());
+            outState.putString(DETAILS_DUEDATE, mDetailsFragment.mDueDateEdit.getText().toString());
+            outState.putString(DETAILS_ADDRESS, mDetailsFragment.mAddressEdit.getText().toString());
+            outState.putString(DETAILS_PRIORITY, mDetailsFragment.mPrioritySpinner.getSelectedItem().toString());
+            outState.putBoolean(DETAILS_CHECKED, mDetailsFragment.mDetailsCheckBox.isChecked());
+        }
 
+    }
+
+    @Override
+    public void onBackPressed() {
+        mDetailsID = -1;
+        mIsDetailsAddButtonClicked = false;
+        super.onBackPressed();
     }
 
     //////////////////////////////////

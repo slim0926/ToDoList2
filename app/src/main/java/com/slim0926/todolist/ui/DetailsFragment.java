@@ -124,7 +124,7 @@ public class DetailsFragment extends Fragment {
         }
     }
 
-//    private Transition createTransition() {
+    //    private Transition createTransition() {
 //        TransitionSet set = new TransitionSet();
 //        set.setOrdering(TransitionSet.ORDERING_SEQUENTIAL);
 //
